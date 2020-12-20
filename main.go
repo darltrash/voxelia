@@ -1,10 +1,12 @@
 package main
+import "math"
 import "github.com/gen2brain/raylib-go/raylib" // This will handle all that graphics mumbo-jumbo
 
 // TYPE DEFINITIONS ------------------------------------------------------
 
 type kind struct {
 	transparent bool
+	modeltype 	uint8        // 0: Box, 1: Billboard, 2: Floor, etc
 	texture     rl.Texture2D
 }
 
@@ -46,13 +48,13 @@ func (self *world) NewBlock(x, y, z float32, kind string, opacity uint16) (corre
 	return
 }
 
-func (self *world) NewKind(name string, transparent bool, texture rl.Texture2D) {
-	self.kinds[name] = &kind{transparent, texture}
+func (self *world) NewKind(name string, transparent bool, texture rl.Texture2D, modeltype uint8) {
+	self.kinds[name] = &kind{transparent, modeltype, texture}
 }
 
 func (self *world) Update(delta float32) {}
 
-func (self *world) Draw() {
+func (self *world) Draw(camera rl.Camera3D) {
 	for _, block := range self.blocks {
 		if block.__empty {
 			break
@@ -60,7 +62,12 @@ func (self *world) Draw() {
 		
 		if !block.ignore {
 			kind := *self.kinds[block.kind]
-			rl.DrawCubeTexture(kind.texture, block.position, 1, 1, 1, rl.White)
+			switch modeltype := kind.modeltype; modeltype {
+				case 0: // Box
+					rl.DrawCubeTexture(kind.texture, block.position, 1, 1, 1, rl.White)
+				case 1: // Billboard
+					rl.DrawBillboard(camera, kind.texture, block.position, 1.0, rl.White)
+			}
 		}
 	}
 }
@@ -71,12 +78,18 @@ func main() {
 	rl.InitWindow(800, 450, "Voxelia")
 	rl.SetTargetFPS(60)
 
-	var WorldInstance = newWorld(100 * 100 * 100)
-	WorldInstance.NewKind("Arrow", false, rl.LoadTexture("assets/test_arrow.png"))
-	WorldInstance.NewBlock(0, 0, 0, "Arrow", 255)
-	WorldInstance.NewBlock(0, 1, 0, "Arrow", 255)
+	var delta = float32(0.0)
 
-	camera := rl.Camera3D{}
+	var WorldInstance = newWorld(100 * 100 * 100)
+	WorldInstance.NewKind("Arrow", false, rl.LoadTexture("assets/test_arrow.png"), 0)
+	WorldInstance.NewKind("ArrowBill", false, rl.LoadTexture("assets/test_arrow.png"), 1)
+	WorldInstance.NewBlock(0, 0, 0, "Arrow", 255)
+	WorldInstance.NewBlock(0, 1, 0, "ArrowBill", 255)
+
+	var angle = float64(0)
+	var distance = float32(5.0)
+	
+	var camera = rl.Camera3D{}
 	camera.Position = rl.NewVector3(5.0, 4.0, 0.0)
 	camera.Target = rl.NewVector3(0.0, 0.0, 0.0)
 	camera.Up = rl.NewVector3(0.0, 1.0, 0.0)
@@ -84,13 +97,35 @@ func main() {
 	camera.Type = rl.CameraPerspective
 
 	for !rl.WindowShouldClose() {
+		delta = rl.GetFrameTime()
+	
+		if rl.IsKeyDown(rl.KeyLeft) { 
+			angle -= float64(5 * delta)
+		}
+
+		if rl.IsKeyDown(rl.KeyRight) { 
+			angle += float64(5 * delta)
+		}
+
+		if rl.IsKeyDown(rl.KeyDown) { 
+			distance += 5 * delta
+		}
+
+		if rl.IsKeyDown(rl.KeyUp) { 
+			distance -= 5 * delta
+		}
+	
+		camera.Position.X = float32(math.Cos(angle)) * distance
+		camera.Position.Y = distance
+		camera.Position.Z = float32(math.Sin(angle)) * distance
+	
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RayWhite)
 
-		WorldInstance.Update(rl.GetFrameTime())
+		WorldInstance.Update(delta)
 
 		rl.BeginMode3D(camera)
-		WorldInstance.Draw()
+		WorldInstance.Draw(camera)
 		rl.EndMode3D()
 
 		rl.DrawFPS(5, 5)
