@@ -69,16 +69,16 @@ func (self *world) Draw() {
 
 func main() {
 	rl.InitWindow(800, 450, "Voxelia")
-	//rl.SetTargetFPS(60)
+	rl.SetTargetFPS(60)
 
 	var WorldInstance = newWorld(100 * 100 * 100)
 	WorldInstance.NewKind("Arrow", false, rl.LoadTexture("assets/test_arrow.png"))
-	WorldInstance.NewBlock(1, 1, 1, "Arrow", 255)
-	WorldInstance.NewBlock(1, 2, 1, "Arrow", 255)
+	WorldInstance.NewBlock(0, 0, 0, "Arrow", 255)
+	WorldInstance.NewBlock(0, 1, 0, "Arrow", 255)
 
 	camera := rl.Camera3D{}
-	camera.Position = rl.NewVector3(5.0, 4.0, 5.0)
-	camera.Target = rl.NewVector3(0.0, 2.0, 0.0)
+	camera.Position = rl.NewVector3(5.0, 4.0, 0.0)
+	camera.Target = rl.NewVector3(0.0, 0.0, 0.0)
 	camera.Up = rl.NewVector3(0.0, 1.0, 0.0)
 	camera.Fovy = 45.0
 	camera.Type = rl.CameraPerspective
