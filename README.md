@@ -5,7 +5,7 @@ A custom voxel-based game engine made in GoLang and Raylib
 This game engine is NOWHERE near ready.
 In the current state, the only thing you'll see is a spinning green box, so, DON'T expect a full fledged Minecraft clone or whatever! (This isnt a Minecraft clone, to begin with!)
 
-This game is also my FIRST GO PROGRAM EVER MADE. So it ~may be~ IS FILLED WITH FLAWS.
+This game is also my FIRST GO PROGRAM EVER MADE. So it ~may be~ is FILLED WITH FLAWS.
 
 ## Running instructions
 In Posix/Linux/MacOSX:
