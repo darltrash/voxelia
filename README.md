@@ -11,7 +11,7 @@ This game is also my FIRST GO PROGRAM EVER MADE. So it ~may be~ is FILLED WITH F
 In Posix/Linux/MacOSX:
 ```shell
 go get -v github.com/gen2brain/raylib-go/raylib
-git clone github.com/darltrash/voxelia
+git clone https://github.com/darltrash/voxelia
 go run voxelia
 ```
 
