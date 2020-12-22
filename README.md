@@ -3,16 +3,17 @@ A custom voxel-based game engine made in GoLang and Raylib
 
 ## WARNING:
 This game engine is NOWHERE near ready.
-In the current state, the only thing you'll see is a spinning green box, so, DON'T expect a full fledged Minecraft clone or whatever! (This isnt a Minecraft clone, to begin with!)
+In the current state, the only thing you'll see is a bunch of blocks and billboards, so, DON'T expect a full fledged Minecraft clone or whatever! (This isnt a Minecraft clone, to begin with!)
 
 This game is also my FIRST GO PROGRAM EVER MADE. So it ~may be~ is FILLED WITH FLAWS.
 
 ## Running instructions
 In Posix/Linux/MacOSX:
-```shell
-go get -v github.com/gen2brain/raylib-go/raylib
+```bash
+go get -v -u github.com/gen2brain/raylib-go/raylib
 git clone https://github.com/darltrash/voxelia
-go run voxelia
+cd voxelia
+go run .
 ```
 
 ## License: 
