@@ -1,135 +1,140 @@
 package main
-import "math"
 import "github.com/gen2brain/raylib-go/raylib" // This will handle all that graphics mumbo-jumbo
+//import "https://github.com/yuin/gopher-lua" // For scripting support and thingies :)
+import "strconv"
 
-// TYPE DEFINITIONS ------------------------------------------------------
+//import "fmt"
+
+// TYPE DEFINITIONS ----------------------------------------------------------
 
 type kind struct {
-	transparent bool
-	modeltype 	uint8        // 0: Box, 1: Billboard, 2: Floor, etc
+	transparent bool 
+	modeltype 	uint8
+	texturepath string
 	texture     rl.Texture2D
 }
 
 type block struct {
-	__empty  bool
 	ignore   bool
-	kind     string
-	opacity  uint16
+	kind     uint8
+	opacity  uint8
 	position rl.Vector3
 }
 
-// WORLD/ENGINE DEFINITION -----------------------------------------------
-
 type world struct {
-	blocks   []*block
-	kinds  	 map[string]*kind
+	blocks   []block
+	kinds  	 []kind
+	color    rl.Color
 }
 
-func newWorld(objs_amnt uint) world {
-	var blockslice = make([]*block, objs_amnt)
-	
-	for i := range blockslice {			// I'll fill the entire slice with "placeholder" objects
-		blockslice[i] = new(block)
-		blockslice[i].__empty = true 	// And then mark them as "empty" so then they arent processed
-	}
+// METHOD DEFINITIONS --------------------------------------------------------
 
-	return world{blockslice, make(map[string]*kind)}
+func NewWorld(block_amnt int) world {
+	return world{make([]block, 100), make([]kind, 128), rl.Color{255, 255, 255, 0}}
 }
 
-func (self *world) NewBlock(x, y, z float32, kind string, opacity uint16) (correct bool) {
-	for i := range self.blocks {
-		if self.blocks[i].__empty {
-			self.blocks[i] = &block{false, false, kind, opacity, rl.Vector3{x, y, z}};
-
-			correct = true
-			break
-		}
-	}
-	return
+func (self *world) NewBlock(x, y, z float32, kind int, opacity uint16) int {
+	self.blocks = append(self.blocks, block{false, uint8(kind), uint8(opacity), rl.Vector3{x, y, z}});
+	return len(self.blocks)
 }
 
-func (self *world) NewKind(name string, transparent bool, texture rl.Texture2D, modeltype uint8) {
-	self.kinds[name] = &kind{transparent, modeltype, texture}
+func (self *world) NewKind(texture string, modeltype uint8, transparent bool) int {
+	self.kinds = append(self.kinds, kind{transparent, modeltype, texture, rl.LoadTexture("assets/" + texture)})
+	return len(self.kinds)-1
 }
 
-func (self *world) Update(delta float32) {}
+func (self *world) Draw(Canvas rl.RenderTexture2D, camera rl.Camera3D) {
+	rl.BeginTextureMode(Canvas)
+		rl.ClearBackground(rl.Blank)
+		rl.BeginMode3D(camera)
+			for _, block := range self.blocks {
+				if !block.ignore {
+					kind := self.kinds[block.kind]
+					self.color.A = block.opacity
 
-func (self *world) Draw(camera rl.Camera3D) {
-	for _, block := range self.blocks {
-		if block.__empty {
-			break
-		}
-		
-		if !block.ignore {
-			kind := *self.kinds[block.kind]
-			switch modeltype := kind.modeltype; modeltype {
-				case 0: // Box
-					rl.DrawCubeTexture(kind.texture, block.position, 1, 1, 1, rl.White)
-				case 1: // Billboard
-					rl.DrawBillboard(camera, kind.texture, block.position, 1.0, rl.White)
+					switch modeltype := kind.modeltype; modeltype {
+						case 0: // Box
+							rl.DrawCubeTexture(kind.texture, block.position, 1, 1, 1, self.color)
+						case 1: // Billboard
+							rl.DrawBillboard(camera, kind.texture, block.position, 1.0, self.color)
+						case 2: // Plane (Currently not working!)
+							rl.DrawPlane(block.position, rl.Vector2{1, 1}, self.color)
+					}
+				}
 			}
-		}
-	}
+		rl.EndMode3D()
+	rl.EndTextureMode()
 }
 
-// MAIN LOOP DEFINITION --------------------------------------------------
+// SETUP STUFF ----------------------------------------------------------------
+
+func float2string(input float32) string {
+	return strconv.FormatFloat(float64(input), 'f', 6, 64)
+}
+
+func SetShaderUniform(shader rl.Shader, uniform string, data []float32, kind int32) {
+	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, uniform), data, kind)
+}
 
 func main() {
 	rl.InitWindow(800, 450, "Voxelia")
 	rl.SetTargetFPS(60)
+	rl.SetExitKey(0);
 
-	var delta = float32(0.0)
-
-	var WorldInstance = newWorld(100 * 100 * 100)
-	WorldInstance.NewKind("Arrow", false, rl.LoadTexture("assets/test_arrow.png"), 0)
-	WorldInstance.NewKind("ArrowBill", false, rl.LoadTexture("assets/test_arrow.png"), 1)
-	WorldInstance.NewBlock(0, 0, 0, "Arrow", 255)
-	WorldInstance.NewBlock(0, 1, 0, "ArrowBill", 255)
-
-	var angle = float64(0)
-	var distance = float32(5.0)
+	var Shader = rl.LoadShader("", "assets/main.frag")	
+	var BlockRender = rl.LoadRenderTexture(800, 450)
 	
-	var camera = rl.Camera3D{}
-	camera.Position = rl.NewVector3(5.0, 4.0, 0.0)
-	camera.Target = rl.NewVector3(0.0, 0.0, 0.0)
-	camera.Up = rl.NewVector3(0.0, 1.0, 0.0)
-	camera.Fovy = 45.0
-	camera.Type = rl.CameraPerspective
+	var WorldInstance = NewWorld(100)
+	var (
+		GRASSBLOCK = WorldInstance.NewKind("grass_block.png", 0, false)
+		GRASSBILL  = WorldInstance.NewKind("grass_bill.png", 1, true)
+	)
+
+	// GENERATE BLOCKS AND THINGS! ---------------------------------------------
+
+	for x := float32(-5.); x < 6; x++ {
+		for y := float32(-5.); y < 6; y++ {
+		    WorldInstance.NewBlock(x, 0, y, GRASSBLOCK, 255)
+		    if rl.GetRandomValue(1, 3)==1 {
+		    	WorldInstance.NewBlock(x, 1, y, GRASSBILL, 255)
+		    }
+		}
+	}
+
+	var distance = float32(2.0)
+	
+	var camera = rl.Camera3D{
+		Position: rl.NewVector3(10.0, 4.0, 0.),
+		Target:   rl.NewVector3(0.0, 0.0, 0.0),
+		Up:       rl.NewVector3(0.0, 1.0, 0.0),
+		Fovy:     45.0,
+		Type:     rl.CameraPerspective,
+	}
+
+	var timer = float32(0)
+
+	// MAIN LOOP DEFINITION ----------------------------------------------------
 
 	for !rl.WindowShouldClose() {
-		delta = rl.GetFrameTime()
-	
-		if rl.IsKeyDown(rl.KeyLeft) { 
-			angle -= float64(5 * delta)
-		}
+		timer += rl.GetFrameTime() * 50
+		camera.Position.X = camera.Target.X + distance * 5. 
+		camera.Position.Y = distance * 3.
 
-		if rl.IsKeyDown(rl.KeyRight) { 
-			angle += float64(5 * delta)
-		}
-
-		if rl.IsKeyDown(rl.KeyDown) { 
-			distance += 5 * delta
-		}
-
-		if rl.IsKeyDown(rl.KeyUp) { 
-			distance -= 5 * delta
-		}
-	
-		camera.Position.X = float32(math.Cos(angle)) * distance
-		camera.Position.Y = distance
-		camera.Position.Z = float32(math.Sin(angle)) * distance
+		// DRAWING/PROCESSING --------------------------------------------------
 	
 		rl.BeginDrawing()
-		rl.ClearBackground(rl.RayWhite)
+			rl.ClearBackground(rl.RayWhite)
+			rl.DrawRectangleGradientV(0, 0, 800, 450, rl.SkyBlue, rl.Blue);
 
-		WorldInstance.Update(delta)
+			WorldInstance.Draw(BlockRender, camera)
 
-		rl.BeginMode3D(camera)
-		WorldInstance.Draw(camera)
-		rl.EndMode3D()
+			rl.BeginShaderMode(Shader)
+				rl.DrawTextureRec(BlockRender.Texture, rl.NewRectangle(0, 0, float32(BlockRender.Texture.Width), float32(-BlockRender.Texture.Height)), rl.NewVector2(0, 0), rl.White)
+			rl.EndShaderMode()
 
-		rl.DrawFPS(5, 5)
-		
+			rl.DrawText(float2string(camera.Position.X), 10, 10, 10, rl.Black)
+			rl.DrawText(float2string(camera.Position.Y), 10, 20, 10, rl.Black)
+			rl.DrawText(float2string(camera.Position.Z), 10, 30, 10, rl.Black)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
