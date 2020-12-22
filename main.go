@@ -78,7 +78,7 @@ func SetShaderUniform(shader rl.Shader, uniform string, data []float32, kind int
 
 func main() {
 	rl.InitWindow(800, 450, "Voxelia")
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(600)
 	rl.SetExitKey(0);
 
 	var Shader = rl.LoadShader("", "assets/main.frag")	
